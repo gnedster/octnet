@@ -1,3 +1,5 @@
+import torch
+
 cimport oc
 
 def is_octree(t):
@@ -6,11 +8,28 @@ def is_octree(t):
 def write_dense_to_bin(path, dense)
   raise NotImplementedError
 
+# TODO: Test
 def read_dense_from_bin(path, dense)
-  raise NotImplementedError
+  sz = [dense.size(i) for i in xrange(dense.n_dimension())]
+    cdef int dims[dense.n_dimension()]
+  dims[:] = sz
 
-def read_dense_from_bin_batch(paths, dense, n_threads):
-  raise NotImplementedError
+  oc.cpu.dense_read_prealloc_cpu(path, dense.n_dimension(), dims, dense.data())
+
+  return dense
+
+# TODO: Test
+def read_dense_from_bin_batch(paths, dense, n_threads=1):
+  sz = [dense.size(i) for i in xrange(dense.n_dimension())]
+
+  cdef int dims[dense.n_dimension()]
+  dims[:] = sz
+
+  cdef const char* paths_c[len(paths) + 1]
+  paths_c[:] = paths + [None]
+
+  oc.cpu.dense_prealloc_batch_cpu(len(paths), paths_c, n_threads, dense.n_dimension(), dims, dense.data())
+  return dense
 
 def free_octree_gpu(obj):
   raise NotImplementedError
@@ -95,7 +114,8 @@ class FloatOctree(Octree):
     raise NotImplementedError
 
   def data(self):
-    raise NotImplementedError
+    tensor = torch.FloatTensor(oc.torch_cpu.octree_data_torch_cpu(self.grid))
+    tensor.
 
   def cpy_data(self, tensor):
     raise NotImplementedError
@@ -103,4 +123,3 @@ class FloatOctree(Octree):
   def cuda(self, other):
     raise NotImplementedError
 
-  
