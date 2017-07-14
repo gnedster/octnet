@@ -1,6 +1,6 @@
 import torch
 
-cimport oc
+cimport ffi
 
 def is_octree(t):
 	return isinstance(t, Octree)
@@ -38,10 +38,11 @@ def oc_cuda_gc_wrapper(obj):
   raise NotImplementedError
 
 def free_octree_cpu(obj):
-  raise NotImplementedError
+  return oc.cpu.octree_free_cpu(obj)
 
 def oc_float_gc_wrapper(obj):
-  raise NotImplementedError
+  obj = free_octree_cpu(obj)
+  return obj
 
 class Octree:
   def __init__(self, oc_type):
@@ -54,6 +55,18 @@ class Octree:
     else:
       raise ValueError('invalid type for octree', oc_type)
     end
+
+  def read_from_bin_batch(self, paths, n_threads=1)
+    cdef const char* paths_c[len(paths) + 1]
+
+    paths_c = paths + [None]
+
+    ffi.octree_read_batch_cpu(len(paths), paths_c, n_threads, self.grid)
+
+    if self._type == 'oc_cuda':
+      self.grid = oc_cuda_gc_wrapper(oc.gpu.octree_to_gpu(self.grid))
+    end
+
 
 class FloatOctree(Octree):
   def __init__(self):
@@ -115,11 +128,10 @@ class FloatOctree(Octree):
 
   def data(self):
     tensor = torch.FloatTensor(oc.torch_cpu.octree_data_torch_cpu(self.grid))
-    tensor.
+    tensor._cdata
 
   def cpy_data(self, tensor):
     raise NotImplementedError
 
   def cuda(self, other):
     raise NotImplementedError
-
